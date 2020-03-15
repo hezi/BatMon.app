@@ -27,28 +27,66 @@
 #include <math.h>
 #import "AppController.h"
 
-
+NSString *dischargingColorKey = @"DischargingColor";
+NSString *chargingColorKey    = @"ChargingColor";
+NSString *warningColorKey     = @"WarningColor";
+NSString *criticalColorKey    = @"CriticalColor";
 
 @implementation AppController
 
++ (NSDictionary *)descriptionFromColor:(NSColor *)color
+{
+  NSColor *rgbColor =  [color colorUsingColorSpaceName:NSCalibratedRGBColorSpace];
+  
+  return @{
+    @"Red":@(rgbColor.redComponent),
+  @"Green":@(rgbColor.greenComponent),
+   @"Blue":@(rgbColor.blueComponent),
+  @"Alpha":@(rgbColor.alphaComponent)
+  };
+}
+
++ (NSColor *)colorForKey:(NSString*)key
+{
+  NSDictionary *desc = [[NSUserDefaults standardUserDefaults] objectForKey: key];
+
+  return [NSColor
+           colorWithCalibratedRed:[desc[@"Red"] floatValue]
+                            green:[desc[@"Green"] floatValue]
+                             blue:[desc[@"Blue"] floatValue]
+                            alpha:[desc[@"Alpha"] floatValue]];
+}
+
 + (void)initialize
 {
-  NSMutableDictionary *defaults = [NSMutableDictionary dictionary];
+  NSDictionary *defaults = @{
+    dischargingColorKey: [self descriptionFromColor: [NSColor blackColor]],
+       chargingColorKey: [self descriptionFromColor: [NSColor greenColor]],
+        warningColorKey: [self descriptionFromColor: [NSColor yellowColor]],
+       criticalColorKey: [self descriptionFromColor: [NSColor redColor]]
+  };
 
-
-  /*
-   * Register your app's defaults here by adding objects to the
-   * dictionary, eg
-   *
-   * [defaults setObject:anObject forKey:keyForThatObject];
-   *
-   */
-  
   [[NSUserDefaults standardUserDefaults] registerDefaults:defaults];
   [[NSUserDefaults standardUserDefaults] synchronize];
 }
 
-+ (NSDictionary*) stateAttributesWithColor:(NSColor*)color {
++ (NSColor*)dischargingColor {
+  return [self colorForKey:dischargingColorKey];
+}
+
++ (NSColor*)chargingColor {
+  return [self colorForKey:chargingColorKey];
+}
+
++ (NSColor*)warningColor {
+  return [self colorForKey:warningColorKey];
+}
+
++ (NSColor*)criticalColor {
+  return [self colorForKey:criticalColorKey];
+}
+
++ (NSDictionary*)stateAttributesWithColor:(NSColor*)color {
     NSMutableParagraphStyle  *style = [[NSMutableParagraphStyle alloc] init];
     [style setParagraphStyle:[NSParagraphStyle defaultParagraphStyle]];
     
@@ -67,10 +105,8 @@
     {
         batModel = [[BatteryModel alloc] init];
 
-        dischargingAttributes = [[[self class] stateAttributesWithColor:[NSColor blackColor]] retain];        
-        chargingAttributes = [[[self class] stateAttributesWithColor:[NSColor greenColor]] retain];
-        criticalAttributes = [[[self class] stateAttributesWithColor:[NSColor redColor]] retain];
-        
+       	[self configureAttributes];
+
         iconPlug = [[NSImage imageNamed:@"small_plug.tif"] retain];
         iconBattery = [[NSImage imageNamed:@"small_battery.tif"] retain];
         
@@ -80,10 +116,22 @@
     return self;
 }
 
+- (void)configureAttributes {
+  [dischargingAttributes release];
+  [chargingAttributes release];
+  [criticalAttributes release];
+
+  dischargingAttributes = [[self.class stateAttributesWithColor:[self.class dischargingColor]] retain];        
+  chargingAttributes    = [[self.class stateAttributesWithColor:[self.class chargingColor]] retain];
+  criticalAttributes    = [[self.class stateAttributesWithColor:[self.class criticalColor]] retain];
+}
+
 - (void)dealloc
 {
-    [stateStrAttributes release];
-    [super dealloc];
+  [dischargingAttributes release];
+  [chargingAttributes release];
+  [criticalAttributes release];
+  [super dealloc];
 }
 
 - (void)awakeFromNib
@@ -197,7 +245,8 @@
     
     
     NSString *label = [NSString stringWithFormat:@"%2.0f%%", [batModel chargePercent]];
-    [label drawAtPoint: NSMakePoint(15 , 12) withAttributes: labelAttributes];
+    NSSize size = [label sizeWithAttributes: labelAttributes];
+    [label drawAtPoint: NSMakePoint((47-size.width)/2 , (47-10-size.height)/2) withAttributes: labelAttributes];
 }
 
 - (void)drawIcon
