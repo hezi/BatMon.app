@@ -53,9 +53,6 @@
     NSDictionary *chargingAttributes;
     NSDictionary *criticalAttributes;
     
-    NSImage *iconBattery;
-    NSImage *iconPlug;
-    
     NSImage *iconFull;
     NSImage *iconEmpty;
 

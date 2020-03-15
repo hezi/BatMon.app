@@ -32,6 +32,10 @@ NSString *chargingColorKey    = @"ChargingColor";
 NSString *warningColorKey     = @"WarningColor";
 NSString *criticalColorKey    = @"CriticalColor";
 
+NSString *labelTypeKey        = @"IconLabelType";
+NSString *labelPercentType    = @"IconLabelPercentType";
+NSString *labelTimeLeftType   = @"IconLabelTimeLeftType";
+
 @implementation AppController
 
 + (NSDictionary *)descriptionFromColor:(NSColor *)color
@@ -63,7 +67,8 @@ NSString *criticalColorKey    = @"CriticalColor";
     dischargingColorKey: [self descriptionFromColor: [NSColor blackColor]],
        chargingColorKey: [self descriptionFromColor: [NSColor greenColor]],
         warningColorKey: [self descriptionFromColor: [NSColor yellowColor]],
-       criticalColorKey: [self descriptionFromColor: [NSColor redColor]]
+       criticalColorKey: [self descriptionFromColor: [NSColor redColor]],
+           labelTypeKey: labelPercentType
   };
 
   [[NSUserDefaults standardUserDefaults] registerDefaults:defaults];
@@ -106,9 +111,6 @@ NSString *criticalColorKey    = @"CriticalColor";
         batModel = [[BatteryModel alloc] init];
 
        	[self configureAttributes];
-
-        iconPlug = [[NSImage imageNamed:@"small_plug.tif"] retain];
-        iconBattery = [[NSImage imageNamed:@"small_battery.tif"] retain];
         
         iconFull = [[NSImage imageNamed:@"battery-full.png"] retain];
         iconEmpty = [[NSImage imageNamed:@"battery-empty.png"] retain];
@@ -183,46 +185,25 @@ NSString *criticalColorKey    = @"CriticalColor";
 
 }
 
-#define HEIGHT 42
-#define WIDTH  20
+- (NSString*)labelText {
+  NSString *type = [[NSUserDefaults standardUserDefaults] stringForKey:labelTypeKey];
+
+  if([type isEqualTo:labelPercentType]) {
+    return [NSString stringWithFormat:@"%2.0f%%", [batModel chargePercent]];
+  }
+
+  if([type isEqualTo:labelTimeLeftType]) {
+    float timeRem = [batModel timeRemaining];
+    int mins = (int)((timeRem - (float)hours) * 60);
+
+    return timeRem >= 0? [NSString stringWithFormat:@"%dh %d\'", hours, mins] : @"unknown";
+  }
+  
+  return nil;
+}
+
 - (void)drawImageRep
 {
-/*
-    NSString *str;
-    NSImage *chargeStatusIcon;
-
-    if ([batModel isCharging])
-      chargeStatusIcon = iconPlug;
-    else
-      chargeStatusIcon = iconBattery;
-
-    [chargeStatusIcon compositeToPoint: NSMakePoint(WIDTH+6, HEIGHT-15) operation:NSCompositeSourceOver];
-
-
-    [[NSColor darkGrayColor] set];
-    // main body
-    [NSBezierPath strokeRect: NSMakeRect(0, 1, WIDTH, HEIGHT)];
-    // top nib
-    [NSBezierPath strokeRect: NSMakeRect((WIDTH/2)-3, HEIGHT+1, 6, 4)];
-
-    [[NSColor grayColor] set];
-    // right light shadow
-    [NSBezierPath strokeLineFromPoint:NSMakePoint(WIDTH+1, 0) toPoint:NSMakePoint(WIDTH+1, HEIGHT-1)];
-    // nib filler
-    [NSBezierPath fillRect: NSMakeRect((WIDTH/2)-2, HEIGHT+1+1, 4, 2)];
-    
-    // draw the charge status
-    if ([batModel isWarning] == YES)
-       [[NSColor orangeColor] set];
-    else if ([batModel isCritical] == YES)
-       [[NSColor redColor] set];
-    else
-       [[NSColor greenColor] set];
-    [NSBezierPath fillRect: NSMakeRect(0+1, 1, WIDTH-1, (chargePercentToDraw/100) * HEIGHT -2)];
-
-    str = [NSString stringWithFormat:@"%2.0f%%", [batModel chargePercent]];
-    [str drawAtPoint: NSMakePoint(WIDTH + 5 , 1) withAttributes:stateStrAttributes];/
-*/
     float chargePercentToDraw; // we need this beause chargePercent can go beyond 100% 
         chargePercentToDraw = [batModel chargePercent];
     if (chargePercentToDraw > 100) {
@@ -244,7 +225,7 @@ NSString *criticalColorKey    = @"CriticalColor";
     }
     
     
-    NSString *label = [NSString stringWithFormat:@"%2.0f%%", [batModel chargePercent]];
+    NSString *label = [self labelText];
     NSSize size = [label sizeWithAttributes: labelAttributes];
     [label drawAtPoint: NSMakePoint((47-size.width)/2 , (47-10-size.height)/2) withAttributes: labelAttributes];
 }
